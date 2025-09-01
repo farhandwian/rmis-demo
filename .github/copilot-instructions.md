@@ -1,4 +1,4 @@
-<!-- # Risk Management Information System (RMIS) - Next.js Implementation Plan
+# Risk Management Information System (RMIS) - Next.js Implementation Plan
 
 ## Overview
 
@@ -929,4 +929,4 @@ export const aiSuggestions = {
 
 This implementation plan provides a comprehensive roadmap for developing the Risk Management Information System using Next.js with PostgreSQL database connectivity and reusable components using shadcn/ui. The system will feature a modern, responsive UI following Ministry of Public Works color guidelines, with all required risk management modules and AI-powered suggestion features for an enhanced user experience.
 
-The modular architecture allows for easy maintenance and future enhancements, while the consistent design patterns ensure a cohesive user experience across all modules. The use of modern technologies like Next.js, TypeScript, Tailwind CSS, shadcn/ui, and Prisma ensures a performant and maintainable application with proper database integration. -->
+The modular architecture allows for easy maintenance and future enhancements, while the consistent design patterns ensure a cohesive user experience across all modules. The use of modern technologies like Next.js, TypeScript, Tailwind CSS, shadcn/ui, and Prisma ensures a performant and maintainable application with proper database integration.
