@@ -1,0 +1,94 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      UserRole @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  risks Risk[]
+  assessments RiskAssessment[]
+
+  @@map("users")
+}
+
+model Risk {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  category    RiskCategory
+  department  String
+  owner       String
+  status      RiskStatus @default(IDENTIFIED)
+  
+  // Probabilitas & Dampak
+  probability Int      // 1-5
+  impact      Int      // 1-5
+  riskScore   Int      // probability * impact
+  
+  // Konteks
+  context     String?
+  
+  // Mitigation
+  mitigation  String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  
+  assessments RiskAssessment[]
+
+  @@map("risks")
+}
+
+model RiskAssessment {
+  id          String   @id @default(cuid())
+  riskId      String
+  risk        Risk     @relation(fields: [riskId], references: [id])
+  
+  assessorId  String
+  assessor    User     @relation(fields: [assessorId], references: [id])
+  
+  probability Int      // 1-5
+  impact      Int      // 1-5
+  riskScore   Int      // probability * impact
+  
+  notes       String?
+  createdAt   DateTime @default(now())
+  
+  @@map("risk_assessments")
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+enum RiskCategory {
+  OPERATIONAL
+  FINANCIAL
+  STRATEGIC
+  COMPLIANCE
+  TECHNOLOGICAL
+  REPUTATIONAL
+}
+
+enum RiskStatus {
+  IDENTIFIED
+  ANALYZED
+  PRIORITIZED
+  MITIGATED
+  MONITORED
+}
