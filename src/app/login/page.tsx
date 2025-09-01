@@ -25,30 +25,32 @@ export default function LoginPage() {
     e.preventDefault();
     setIsLoading(true);
 
-    // Dummy authentication - check against seed user
-    if (
-      formData.email === "budi.direktur@example.com" &&
-      formData.password === "Password123!"
-    ) {
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
 
-      // Store user session (in a real app, this would be handled by auth system)
-      localStorage.setItem(
-        "user",
-        JSON.stringify({
-          email: "budi.direktur@example.com",
-          nama: "Budi Santoso",
-          tingkatan_jabatan: "T2",
-        })
-      );
+      const data = await response.json();
 
+      if (!response.ok) {
+        throw new Error(data.error || "Login failed");
+      }
+
+      // Store user session
+      localStorage.setItem("user", JSON.stringify(data.user));
+
+      // Redirect to risk management
       router.push("/dashboard/risks/context");
-    } else {
-      alert("Email atau password salah!");
+    } catch (error) {
+      console.error("Login error:", error);
+      alert(error instanceof Error ? error.message : "Login failed");
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

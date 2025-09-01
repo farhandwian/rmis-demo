@@ -19,6 +19,7 @@ export default function RiskContextPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingContext, setEditingContext] = useState<Konteks | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     nama_kl: "",
     tahun_penilaian: new Date().getFullYear(),
@@ -29,37 +30,88 @@ export default function RiskContextPage() {
     proses_bisnis: "",
   });
 
-  // Load contexts from localStorage on component mount
-  useEffect(() => {
-    const savedContexts = localStorage.getItem("risk_contexts");
-    if (savedContexts) {
-      setContexts(JSON.parse(savedContexts));
+  // Get current user
+  const getCurrentUser = () => {
+    const userStr = localStorage.getItem("user");
+    if (!userStr) return null;
+    return JSON.parse(userStr);
+  };
+
+  // Load contexts from API
+  const loadContexts = async () => {
+    const user = getCurrentUser();
+    if (!user) return;
+
+    try {
+      setIsLoading(true);
+      const response = await fetch(`/api/risk-contexts?userId=${user.id}`);
+      if (!response.ok) throw new Error("Failed to fetch contexts");
+
+      const data = await response.json();
+      setContexts(data);
+    } catch (error) {
+      console.error("Error loading contexts:", error);
+      alert("Gagal memuat data konteks");
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  // Load contexts on component mount
+  useEffect(() => {
+    loadContexts();
   }, []);
 
-  // Save contexts to localStorage whenever contexts change
-  useEffect(() => {
-    localStorage.setItem("risk_contexts", JSON.stringify(contexts));
-  }, [contexts]);
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const user = getCurrentUser();
+    if (!user) return;
 
-    const newContext: Konteks = {
-      id: editingContext?.id || Date.now().toString(),
-      ...formData,
-      created_at: editingContext?.created_at || new Date().toISOString(),
-    };
+    try {
+      setIsLoading(true);
 
-    if (editingContext) {
-      setContexts((prev) =>
-        prev.map((ctx) => (ctx.id === editingContext.id ? newContext : ctx))
-      );
-    } else {
-      setContexts((prev) => [...prev, newContext]);
+      const url = editingContext ? "/api/risk-contexts" : "/api/risk-contexts";
+
+      const method = editingContext ? "PUT" : "POST";
+
+      const body = editingContext
+        ? { ...formData, id: editingContext.id, userId: user.id }
+        : { ...formData, userId: user.id };
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to save context");
+      }
+
+      // Reload contexts after successful save
+      await loadContexts();
+
+      // Reset form
+      setFormData({
+        nama_kl: "",
+        tahun_penilaian: new Date().getFullYear(),
+        periode: "",
+        sumber_data: "",
+        dja_yang_menilai: "",
+        tujuan_strategis: "",
+        proses_bisnis: "",
+      });
+      setIsFormOpen(false);
+      setEditingContext(null);
+    } catch (error) {
+      console.error("Error saving context:", error);
+      alert(error instanceof Error ? error.message : "Gagal menyimpan konteks");
+    } finally {
+      setIsLoading(false);
     }
-
-    handleCloseForm();
   };
 
   const handleEdit = (context: Konteks) => {
@@ -76,9 +128,33 @@ export default function RiskContextPage() {
     setIsFormOpen(true);
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm("Apakah Anda yakin ingin menghapus konteks ini?")) {
-      setContexts((prev) => prev.filter((ctx) => ctx.id !== id));
+  const handleDelete = async (id: string) => {
+    if (!confirm("Apakah Anda yakin ingin menghapus konteks ini?")) return;
+
+    const user = getCurrentUser();
+    if (!user) return;
+
+    try {
+      setIsLoading(true);
+      const response = await fetch(
+        `/api/risk-contexts?id=${id}&userId=${user.id}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to delete context");
+      }
+
+      // Reload contexts after successful delete
+      await loadContexts();
+    } catch (error) {
+      console.error("Error deleting context:", error);
+      alert(error instanceof Error ? error.message : "Gagal menghapus konteks");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -248,13 +324,22 @@ export default function RiskContextPage() {
               </div>
 
               <div className="flex gap-4">
-                <Button type="submit" className="btn-primary">
-                  {editingContext ? "Update Konteks" : "Simpan Konteks"}
+                <Button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={isLoading}
+                >
+                  {isLoading
+                    ? "Menyimpan..."
+                    : editingContext
+                    ? "Update Konteks"
+                    : "Simpan Konteks"}
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
                   onClick={handleCloseForm}
+                  disabled={isLoading}
                 >
                   Batal
                 </Button>
@@ -340,6 +425,7 @@ export default function RiskContextPage() {
                       variant="outline"
                       size="icon"
                       onClick={() => handleEdit(context)}
+                      disabled={isLoading}
                     >
                       <Edit className="w-4 h-4" />
                     </Button>
@@ -347,6 +433,7 @@ export default function RiskContextPage() {
                       variant="outline"
                       size="icon"
                       onClick={() => handleDelete(context.id)}
+                      disabled={isLoading}
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
